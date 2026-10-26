@@ -1,0 +1,5 @@
+{
+  "name": "NetPulse ISP Manager",
+  "description": "Professional ISP Billing & Management System with MikroTik integration, bKash payment gateway, automated SMS notifications, and customer portal.",
+  "requestFramePermissions": []
+}
