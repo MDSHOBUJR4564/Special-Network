@@ -1,9 +1,8 @@
-import { format } from 'date-fns';
-
 export interface User {
-  id: number;
+  id: string | number;
   username: string;
   full_name: string;
+  email?: string;
   address: string;
   phone: string;
   package_name: string;
@@ -12,11 +11,12 @@ export interface User {
   expiry_date: string;
   role: 'admin' | 'customer';
   created_at: string;
+  mikrotik_id?: string;
 }
 
 export interface Invoice {
-  id: number;
-  user_id: number;
+  id: string | number;
+  user_id: string | number;
   user_name?: string;
   amount: number;
   month: string;
@@ -27,8 +27,8 @@ export interface Invoice {
 }
 
 export interface Ticket {
-  id: number;
-  user_id: number;
+  id: string | number;
+  user_id: string | number;
   user_name?: string;
   subject: string;
   message: string;
@@ -44,7 +44,7 @@ export interface Stats {
 }
 
 export interface Package {
-  id: number;
+  id: string | number;
   name: string;
   price: number;
   local_address: string;
