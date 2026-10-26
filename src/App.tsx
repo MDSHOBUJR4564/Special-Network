@@ -58,7 +58,7 @@ import {
   saveFirestoreSettings,
   updateFirestoreInvoice
 } from './firebase';
-import { signOut as fbSignOut } from 'firebase/auth';
+import { signOut as fbSignOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 // Utility for tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -217,12 +217,53 @@ export default function App() {
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
 
   const [loggingIn, setLoggingIn] = useState(false);
+  const [fbUser, setFbUser] = useState<FirebaseUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  // Monitor Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setFbUser(currentUser);
+      setAuthReady(true);
+      if (currentUser) {
+        const isAdmin = currentUser.email === 'mdshobuj4564@gmail.com' || currentUser.email?.includes('admin');
+        const profile: User = {
+          id: currentUser.uid,
+          username: currentUser.email ? currentUser.email.split('@')[0] : 'user',
+          full_name: currentUser.displayName || (isAdmin ? `Admin (${currentUser.email})` : 'Google User'),
+          email: currentUser.email || '',
+          address: 'Online',
+          phone: currentUser.phoneNumber || '',
+          package_name: 'Standard 10Mbps',
+          price: 500,
+          status: 'active',
+          expiry_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          role: isAdmin ? 'admin' : 'customer',
+          created_at: new Date().toISOString()
+        };
+        setUser(profile);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
+    // Always fetch data from backend REST API (SQLite)
+    fetchData();
+
     if (!user) return;
 
-    // Seed initial packages in Firestore if empty
-    seedInitialFirestoreData();
+    // Only attach real-time Firestore listeners if Firebase user is authenticated
+    if (!fbUser || !auth.currentUser) {
+      return;
+    }
+
+    const isAdmin = user.role === 'admin' || fbUser.email === 'mdshobuj4564@gmail.com';
+
+    // Seed initial packages in Firestore if empty and user is admin
+    if (isAdmin) {
+      seedInitialFirestoreData();
+    }
 
     // 1. Subscribe to packages (Firestore real-time)
     const unsubPackages = subscribeToPackages((pkgs) => {
@@ -236,7 +277,7 @@ export default function App() {
 
     // 2. Subscribe to users (Admin view)
     let unsubUsers = () => {};
-    if (user.role === 'admin') {
+    if (isAdmin) {
       unsubUsers = subscribeToUsers((usersList) => {
         if (usersList.length > 0) {
           setUsers(usersList);
@@ -251,8 +292,8 @@ export default function App() {
 
     // 3. Subscribe to invoices (Admin or customer specific)
     const unsubInvoices = subscribeToInvoices(
-      user.role === 'admin' ? null : String(user.id),
-      user.role === 'admin',
+      isAdmin ? null : String(fbUser.uid),
+      isAdmin,
       (invs) => {
         if (invs.length > 0) {
           setInvoices(invs);
@@ -269,8 +310,8 @@ export default function App() {
 
     // 4. Subscribe to tickets
     const unsubTickets = subscribeToTickets(
-      user.role === 'admin' ? null : String(user.id),
-      user.role === 'admin',
+      isAdmin ? null : String(fbUser.uid),
+      isAdmin,
       (tkts) => {
         if (tkts.length > 0) {
           setTickets(tkts);
@@ -280,16 +321,13 @@ export default function App() {
 
     // 5. Subscribe to settings
     let unsubSettings = () => {};
-    if (user.role === 'admin') {
+    if (isAdmin) {
       unsubSettings = subscribeToSettings((stgs) => {
         if (Object.keys(stgs).length > 0) {
           setSettings(prev => ({ ...prev, ...stgs }));
         }
       });
     }
-
-    // Also fetch initial data from backend API
-    fetchData();
 
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'BKASH_PAYMENT_SUCCESS') {
@@ -306,7 +344,7 @@ export default function App() {
       unsubSettings();
       window.removeEventListener('message', handleMessage);
     };
-  }, [user]);
+  }, [user, fbUser]);
 
   const handleBKashPayment = async (invoiceId: string | number, amount: number) => {
     try {
@@ -771,6 +809,7 @@ export default function App() {
       console.warn("Sign out exception:", e);
     }
     setUser(null);
+    setFbUser(null);
     localStorage.removeItem('netpulse_user');
     setView('dashboard');
   };

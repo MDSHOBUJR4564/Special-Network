@@ -143,6 +143,7 @@ export async function signInWithGoogle(): Promise<User> {
 
 // Seed default initial packages if not present in Firestore
 export async function seedInitialFirestoreData() {
+  if (!auth.currentUser) return;
   const path = 'packages';
   try {
     const snap = await getDocs(collection(db, path));
@@ -164,6 +165,7 @@ export async function seedInitialFirestoreData() {
 
 // Firestore Realtime Subscriptions
 export function subscribeToPackages(onUpdate: (pkgs: Package[]) => void) {
+  if (!auth.currentUser) return () => {};
   const path = 'packages';
   return onSnapshot(collection(db, path), (snapshot) => {
     const list: Package[] = snapshot.docs.map(docSnap => ({
@@ -177,6 +179,7 @@ export function subscribeToPackages(onUpdate: (pkgs: Package[]) => void) {
 }
 
 export function subscribeToUsers(onUpdate: (users: User[]) => void) {
+  if (!auth.currentUser) return () => {};
   const path = 'users';
   return onSnapshot(collection(db, path), (snapshot) => {
     const list: User[] = snapshot.docs.map(docSnap => ({
@@ -190,6 +193,7 @@ export function subscribeToUsers(onUpdate: (users: User[]) => void) {
 }
 
 export function subscribeToInvoices(userId: string | null, isAdmin: boolean, onUpdate: (invoices: Invoice[]) => void) {
+  if (!auth.currentUser) return () => {};
   const path = 'invoices';
   const colRef = collection(db, path);
   const q = (!isAdmin && userId) ? query(colRef, where('userId', '==', userId)) : colRef;
@@ -216,6 +220,7 @@ export function subscribeToInvoices(userId: string | null, isAdmin: boolean, onU
 }
 
 export function subscribeToTickets(userId: string | null, isAdmin: boolean, onUpdate: (tickets: Ticket[]) => void) {
+  if (!auth.currentUser) return () => {};
   const path = 'tickets';
   const colRef = collection(db, path);
   const q = (!isAdmin && userId) ? query(colRef, where('userId', '==', userId)) : colRef;
@@ -240,6 +245,7 @@ export function subscribeToTickets(userId: string | null, isAdmin: boolean, onUp
 }
 
 export function subscribeToSettings(onUpdate: (settings: Record<string, string>) => void) {
+  if (!auth.currentUser) return () => {};
   const path = 'settings';
   return onSnapshot(collection(db, path), (snapshot) => {
     const map: Record<string, string> = {};
@@ -257,6 +263,7 @@ export function subscribeToSettings(onUpdate: (settings: Record<string, string>)
 
 // Mutators
 export async function createFirestorePackage(pkg: Omit<Package, 'id'>) {
+  if (!auth.currentUser) return;
   const path = 'packages';
   try {
     const docRef = await addDoc(collection(db, path), {
@@ -270,6 +277,7 @@ export async function createFirestorePackage(pkg: Omit<Package, 'id'>) {
 }
 
 export async function updateFirestorePackage(id: string | number, pkg: Partial<Package>) {
+  if (!auth.currentUser) return;
   const path = `packages/${id}`;
   try {
     await updateDoc(doc(db, 'packages', String(id)), pkg);
@@ -279,6 +287,7 @@ export async function updateFirestorePackage(id: string | number, pkg: Partial<P
 }
 
 export async function deleteFirestorePackage(id: string | number) {
+  if (!auth.currentUser) return;
   const path = `packages/${id}`;
   try {
     await deleteDoc(doc(db, 'packages', String(id)));
@@ -288,6 +297,7 @@ export async function deleteFirestorePackage(id: string | number) {
 }
 
 export async function createFirestoreUser(usr: Partial<User>) {
+  if (!auth.currentUser) return;
   const path = 'users';
   try {
     const docRef = await addDoc(collection(db, path), {
@@ -301,6 +311,7 @@ export async function createFirestoreUser(usr: Partial<User>) {
 }
 
 export async function updateFirestoreUser(id: string | number, usr: Partial<User>) {
+  if (!auth.currentUser) return;
   const path = `users/${id}`;
   try {
     await updateDoc(doc(db, 'users', String(id)), usr);
@@ -310,6 +321,7 @@ export async function updateFirestoreUser(id: string | number, usr: Partial<User
 }
 
 export async function updateFirestoreInvoice(id: string | number, data: Partial<Invoice>) {
+  if (!auth.currentUser) return;
   const path = `invoices/${id}`;
   try {
     await updateDoc(doc(db, 'invoices', String(id)), {
@@ -324,6 +336,7 @@ export async function updateFirestoreInvoice(id: string | number, data: Partial<
 }
 
 export async function createFirestoreTicket(tkt: { userId: string | number, userName: string, subject: string, message: string }) {
+  if (!auth.currentUser) return;
   const path = 'tickets';
   try {
     const docRef = await addDoc(collection(db, path), {
@@ -341,6 +354,7 @@ export async function createFirestoreTicket(tkt: { userId: string | number, user
 }
 
 export async function saveFirestoreSettings(settings: Record<string, string>) {
+  if (!auth.currentUser) return;
   const path = 'settings';
   try {
     for (const [key, value] of Object.entries(settings)) {
